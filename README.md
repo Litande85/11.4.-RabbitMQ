@@ -241,10 +241,10 @@ connection.close()
 ```
 
 ```bash
-user@makhota-vm10:~$ sudo nano /home/user/RabbitMQ/producer.py 
 user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py 
-user@makhota-vm10:~$ sudo nano /home/user/RabbitMQ/producer.py 
-user@makhota-vm10:~$ sudo nano /home/user/RabbitMQ/consumer.py 
+user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py 
+user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py 
+user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py 
 ```
 
 ![Ready](img/Screenshot_20230220_225337.png)
@@ -282,7 +282,7 @@ user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/consumer.py
  ![Acked](img/Screenshot_20230220_230558.png)
 
  ![Acked](img/Screenshot_20230220_230615.png)
- 
+
 ---
 
 ### Задание 3. Подготовка HA кластера
