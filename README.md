@@ -322,7 +322,7 @@ $ rabbitmqadmin get queue='hello'
 
 
 
-Используя terraform создано две машины
+С использованием terraform создано две машины
 
 [terraform/main.tf](terraform/main.tf)
 
@@ -425,7 +425,7 @@ Cluster status of node rabbit@rabbit2 ...
 
 ```
 
-Для закрепления материала снова запустите скрипт producer.py 
+Запушен скрипт producer.py на ноде `rabbit1`
 
 ```bash
 user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py
@@ -436,7 +436,7 @@ user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py
 ![queue1](img/Screenshot_20230225_180111.png)
 
 
-Установлен инструмент `rabbitmqadmin`
+Установлен инструмент `rabbitmqadmin` на обеих нодах
 
 ```bash
 wget https://raw.githubusercontent.com/rabbitmq/rabbitmq-management/v3.7.8/bin/rabbitmqadmin
@@ -445,20 +445,24 @@ sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python3|' rabbitmqadmin
 sudo cp rabbitmqadmin /usr/bin/
 ```
 
+Проверка очередей на ноде `rabbit1`
 
 ![queues](img/img%202023-02-25%20190342.png)
 
+
+Запушен скрипт producer.py на ноде `rabbit2`
 
 ```bash
 user@makhota-vm11:~$ sudo python3 /home/user/RabbitMQ/producer.py
 user@makhota-vm11:~$ sudo python3 /home/user/RabbitMQ/producer.py
 ```
+Проверка очередей на ноде `rabbit2`
 
 ![queue2](img/Screenshot_20230225_1907391.png)
 
 ![queues2](img/img%202023-02-25%20191013.png)
 
-Отключена нода rabbit2
+Отключена нода `rabbit2`
 
 ```bash
 user@makhota-vm11:~$ docker stop rabbit
