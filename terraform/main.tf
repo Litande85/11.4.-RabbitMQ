@@ -85,7 +85,6 @@ resource "yandex_compute_instance" "vm" {
       "sudo sed -i '$a127.0.0.1 ${var.guest_name_prefix}-vm1${count.index}' /etc/hosts",
       "chmod +x /home/user/RabbitMQ/docker.sh",
       "sudo /home/user/RabbitMQ/docker.sh",  # setup docker
-      "sudo docker run -d --hostname ${var.guest_name_prefix}-vm1${count.index} --name rabbit-1${count.index} -p 5672:5672 -p 15672:15672 rabbitmq:3-management" # setup RabbitMQ
     ]  
   }
 }

@@ -321,6 +321,162 @@ $ rabbitmqadmin get queue='hello'
 ### <a name="3">*Ответ к Заданию 3*</a>
 
 
+
+Используя terraform создано две машины
+
+[terraform/main.tf](terraform/main.tf)
+
+`10.128.0.10`
+`10.128.0.11`
+
+Установлен RabbitMQ с помощью docker на `10.128.0.10`
+
+```bash 
+docker run --hostname rabbit1 \
+--add-host rabbit1:10.128.0.10 \
+--add-host rabbit2:10.128.0.11 \
+--name rabbit \
+-p 15672:15672 -p 4369:4369 -p 5672:5672 -p 5671:5671 -p 25672:25672 \
+-e RABBITMQ_ERLANG_COOKIE='makhota-makhota' \
+-d rabbitmq:3.5-management
+```
+
+Установлен RabbitMQ с помощью docker на `10.128.0.11`
+
+```bash 
+docker run --hostname rabbit2 \
+--add-host rabbit1:10.128.0.10 \
+--add-host rabbit2:10.128.0.11 \
+--name rabbit \
+-p 15672:15672 -p 4369:4369 -p 5672:5672 -p 5671:5671 -p 25672:25672 \
+-e RABBITMQ_ERLANG_COOKIE='makhota-makhota' \
+-d rabbitmq:3.5-management
+```
+
+C помощью опции `--add-host`  в файл hosts кадого контейнера при создании добавлены название и IP-адрес каждой ноды, чтобы они могли видеть друг друга по имени.
+
+Stdout
+```shell 
+user@makhota-vm10:~$ docker exec rabbit cat /etc/hosts
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+10.128.0.10     rabbit1
+10.128.0.11     rabbit2
+172.17.0.2      rabbit1
+```
+
+После этого ноды могут пинговаться по имени.
+
+```bash
+user@makhota-vm10:~$ docker exec rabbit ping -c1 rabbit2
+PING rabbit2 (10.128.0.11): 56 data bytes
+64 bytes from 10.128.0.11: icmp_seq=0 ttl=62 time=5.429 ms
+--- rabbit2 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 5.429/5.429/5.429/0.000 ms
+```
+
+Затем  две ноды объединены в кластер.
+
+```bash
+user@makhota-vm10:~$ docker exec rabbit rabbitmqctl stop_app
+Stopping node rabbit@rabbit1 ...
+user@makhota-vm10:~$ docker exec rabbit rabbitmqctl join_cluster rabbit@rabbit2
+Clustering node rabbit@rabbit1 with rabbit@rabbit2 ...
+user@makhota-vm10:~$ docker exec rabbit rabbitmqctl start_app
+Starting node rabbit@rabbit1 ...
+```
+
+![Clustering](img/Screenshot_20230225_175146.png)
+
+
+Создана политика ha-all на все очереди.
+
+```bash
+user@makhota-vm10:~$ docker exec rabbit rabbitmqctl set_policy ha-all "" '{"ha-mode":"all","ha-sync-mode":"automatic"}'
+Setting policy "ha-all" for pattern [] to "{\"ha-mode\":\"all\",\"ha-sync-mode\":\"automatic\"}" with priority "0" ...
+```
+
+![policy](img/Screenshot_20230225_175209.png)
+
+
+Вывод команды `rabbitmqctl cluster_status` с двух нод:
+
+```shell 
+user@makhota-vm10:~$ docker exec -it rabbit bash
+root@rabbit1:/# rabbitmqctl cluster_status
+Cluster status of node rabbit@rabbit1 ...
+[{nodes,[{disc,[rabbit@rabbit1,rabbit@rabbit2]}]},
+ {running_nodes,[rabbit@rabbit2,rabbit@rabbit1]},
+ {cluster_name,<<"rabbit@rabbit1">>},
+ {partitions,[]}]
+root@rabbit1:/# exit
+
+user@makhota-vm11:~$ docker exec rabbit rabbitmqctl cluster_status
+Cluster status of node rabbit@rabbit2 ...
+[{nodes,[{disc,[rabbit@rabbit1,rabbit@rabbit2]}]},
+ {running_nodes,[rabbit@rabbit1,rabbit@rabbit2]},
+ {cluster_name,<<"rabbit@rabbit1">>},
+ {partitions,[]}]
+
+```
+
+Для закрепления материала снова запустите скрипт producer.py 
+
+```bash
+user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py
+user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py
+user@makhota-vm10:~$ sudo python3 /home/user/RabbitMQ/producer.py
+```
+
+![queue1](img/Screenshot_20230225_180111.png)
+
+
+Установлен инструмент `rabbitmqadmin`
+
+```bash
+wget https://raw.githubusercontent.com/rabbitmq/rabbitmq-management/v3.7.8/bin/rabbitmqadmin
+chmod 777 rabbitmqadmin
+sed -i 's|#!/usr/bin/env python|#!/usr/bin/env python3|' rabbitmqadmin
+sudo cp rabbitmqadmin /usr/bin/
+```
+
+
+![queues](img/img%202023-02-25%20190342.png)
+
+
+```bash
+user@makhota-vm11:~$ sudo python3 /home/user/RabbitMQ/producer.py
+user@makhota-vm11:~$ sudo python3 /home/user/RabbitMQ/producer.py
+```
+
+![queue2](img/Screenshot_20230225_1907391.png)
+
+![queues2](img/img%202023-02-25%20191013.png)
+
+Отключена нода rabbit2
+
+```bash
+user@makhota-vm11:~$ docker stop rabbit
+rabbit
+```
+
+![Disconnect](img/Screenshot_20230225_191334.png)
+
+
+Запущен [consumer.py](py/consumer.py) на ноде `rabbit1`
+
+![consumer](img/img%202023-02-25%20191755.png)
+
+![consumer2](img/Screenshot_20230225_191639.png)
+
+![consumer3](img/Screenshot_20230225_191652.png)
+
+
 ---
 
 ## Дополнительные задания (со звёздочкой*)
