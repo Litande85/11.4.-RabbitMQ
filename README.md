@@ -627,6 +627,8 @@ rabbit
 
 ```
 
+### Тестирование
+
 ```bash
 user@makhotaev:~/ansible$ (master)ansible all -m ping
 10.128.0.12 | SUCCESS => {
