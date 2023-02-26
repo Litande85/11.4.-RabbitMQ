@@ -1,0 +1,124 @@
+- name: Play rabbitmq1
+  hosts: rabbit1
+  become: no
+  tasks:
+  
+  - name: Run docker rabbit1 container
+    docker_container:
+      env:   
+        RABBITMQ_ERLANG_COOKIE: 'makhota-makhota'
+      hostname: rabbit1
+      image: rabbitmq:3.5-management
+      name: rabbit
+      ports: 
+        - "15672:15672"
+        - "4369:4369"
+        - "5672:5672"
+        - "5671:5671"
+        - "25672:25672"
+      etc_hosts: 
+        {
+          rabbit1 : 10.128.0.10,
+          rabbit2 : 10.128.0.11,
+          rabbit3 : 10.128.0.12,
+        }
+        
+
+      restart_policy: always
+      state: started
+
+- name: Play rabbitmq2
+  hosts: rabbit2
+  become: no
+  tasks:
+  
+  - name: Run docker rabbit2 container
+    docker_container:
+      env:   
+        RABBITMQ_ERLANG_COOKIE: 'makhota-makhota'
+      hostname: rabbit2
+      image: rabbitmq:3.5-management
+      name: rabbit
+      ports: 
+        - "15672:15672"
+        - "4369:4369"
+        - "5672:5672"
+        - "5671:5671"
+        - "25672:25672"
+      etc_hosts: 
+        {
+          rabbit1 : 10.128.0.10,
+          rabbit2 : 10.128.0.11,
+          rabbit3 : 10.128.0.12,
+        }
+
+      restart_policy: always
+      state: started
+  
+  
+  - name: Add rabbit2 to cluster
+    community.docker.docker_container_exec:
+      container: rabbit
+      command: /bin/bash -c "rabbitmqctl stop_app ; rabbitmqctl join_cluster rabbit@rabbit1 ; rabbitmqctl start_app"
+      chdir: /root
+    register: result
+    ignore_errors: true
+
+  - name: Print stdout
+    debug:
+      var: result.stdout
+
+- name: Play rabbitmq3
+  hosts: rabbit3
+  become: no
+  tasks:
+  
+  - name: Run docker rabbit3 container
+    docker_container:
+      env:   
+        RABBITMQ_ERLANG_COOKIE: 'makhota-makhota'
+      hostname: rabbit3
+      image: rabbitmq:3.5-management
+      name: rabbit
+      ports: 
+        - "15672:15672"
+        - "4369:4369"
+        - "5672:5672"
+        - "5671:5671"
+        - "25672:25672"
+      etc_hosts: 
+        {
+          rabbit1 : 10.128.0.10,
+          rabbit2 : 10.128.0.11,
+          rabbit3 : 10.128.0.12,
+        }
+      restart_policy: always
+      state: started
+
+  - name: Add rabbit3 to cluster
+    community.docker.docker_container_exec:
+      container: rabbit
+      command: /bin/bash -c "rabbitmqctl stop_app ; rabbitmqctl join_cluster rabbit@rabbit1 ; rabbitmqctl start_app"
+      chdir: /root
+    register: result
+    ignore_errors: true
+
+
+  - name: Print stdout
+    debug:
+      var: result.stdout
+
+- name: Play Policies
+  hosts: rabbit1
+  become: no
+  tasks:
+  
+  
+  - name: Add Policy
+    command: docker exec rabbit rabbitmqctl set_policy ha-all "" '{"ha-mode":"all","ha-sync-mode":"automatic"}'
+    register: result
+    ignore_errors: true
+
+  - name: Print stdout
+    debug:
+      var: result.stdout

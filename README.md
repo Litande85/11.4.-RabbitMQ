@@ -494,3 +494,307 @@ rabbit
 *Готовый плейбук разместите в своём репозитории.*
 
 ### <a name="4">*Ответ к Заданию 4**</a>
+
+[ansible/hosts](ansible/hosts)
+
+[ansible/playbookrabbitmq.yml](ansible/playbookrabbitmq.yml)
+
+```yaml
+- name: Play rabbitmq1
+  hosts: rabbit1
+  become: no
+  tasks:
+  
+  - name: Run docker rabbit1 container
+    docker_container:
+      env:   
+        RABBITMQ_ERLANG_COOKIE: 'makhota-makhota'
+      hostname: rabbit1
+      image: rabbitmq:3.5-management
+      name: rabbit
+      ports: 
+        - "15672:15672"
+        - "4369:4369"
+        - "5672:5672"
+        - "5671:5671"
+        - "25672:25672"
+      etc_hosts: 
+        {
+          rabbit1 : 10.128.0.10,
+          rabbit2 : 10.128.0.11,
+          rabbit3 : 10.128.0.12,
+        }
+        
+
+      restart_policy: always
+      state: started
+
+- name: Play rabbitmq2
+  hosts: rabbit2
+  become: no
+  tasks:
+  
+  - name: Run docker rabbit2 container
+    docker_container:
+      env:   
+        RABBITMQ_ERLANG_COOKIE: 'makhota-makhota'
+      hostname: rabbit2
+      image: rabbitmq:3.5-management
+      name: rabbit
+      ports: 
+        - "15672:15672"
+        - "4369:4369"
+        - "5672:5672"
+        - "5671:5671"
+        - "25672:25672"
+      etc_hosts: 
+        {
+          rabbit1 : 10.128.0.10,
+          rabbit2 : 10.128.0.11,
+          rabbit3 : 10.128.0.12,
+        }
+
+      restart_policy: always
+      state: started
+  
+  
+  - name: Add rabbit2 to cluster
+    community.docker.docker_container_exec:
+      container: rabbit
+      command: /bin/bash -c "rabbitmqctl stop_app ; rabbitmqctl join_cluster rabbit@rabbit1 ; rabbitmqctl start_app"
+      chdir: /root
+    register: result
+    ignore_errors: true
+
+  - name: Print stdout
+    debug:
+      var: result.stdout
+
+- name: Play rabbitmq3
+  hosts: rabbit3
+  become: no
+  tasks:
+  
+  - name: Run docker rabbit3 container
+    docker_container:
+      env:   
+        RABBITMQ_ERLANG_COOKIE: 'makhota-makhota'
+      hostname: rabbit3
+      image: rabbitmq:3.5-management
+      name: rabbit
+      ports: 
+        - "15672:15672"
+        - "4369:4369"
+        - "5672:5672"
+        - "5671:5671"
+        - "25672:25672"
+      etc_hosts: 
+        {
+          rabbit1 : 10.128.0.10,
+          rabbit2 : 10.128.0.11,
+          rabbit3 : 10.128.0.12,
+        }
+      restart_policy: always
+      state: started
+
+  - name: Add rabbit3 to cluster
+    community.docker.docker_container_exec:
+      container: rabbit
+      command: /bin/bash -c "rabbitmqctl stop_app ; rabbitmqctl join_cluster rabbit@rabbit1 ; rabbitmqctl start_app"
+      chdir: /root
+    register: result
+    ignore_errors: true
+
+
+  - name: Print stdout
+    debug:
+      var: result.stdout
+
+- name: Play Policies
+  hosts: rabbit1
+  become: no
+  tasks:
+  
+  
+  - name: Add Policy
+    command: docker exec rabbit rabbitmqctl set_policy ha-all "" '{"ha-mode":"all","ha-sync-mode":"automatic"}'
+    register: result
+    ignore_errors: true
+
+  - name: Print stdout
+    debug:
+      var: result.stdout
+
+```
+
+```bash
+user@makhotaev:~/ansible$ (master)ansible all -m ping
+10.128.0.10 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+10.128.0.12 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+10.128.0.11 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker ps'
+10.128.0.10 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
+70660516a621   rabbitmq:3.5-management   "/docker-entrypoint.…"   20 minutes ago   Up 20 minutes   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
+10.128.0.11 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
+48030d625699   rabbitmq:3.5-management   "/docker-entrypoint.…"   20 minutes ago   Up 20 minutes   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
+10.128.0.12 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
+f5fc26afcbfa   rabbitmq:3.5-management   "/docker-entrypoint.…"   20 minutes ago   Up 19 minutes   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker stop rabbit'
+10.128.0.10 | CHANGED | rc=0 >>
+rabbit
+10.128.0.11 | CHANGED | rc=0 >>
+rabbit
+10.128.0.12 | CHANGED | rc=0 >>
+rabbit
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker rm rabbit'
+10.128.0.10 | CHANGED | rc=0 >>
+rabbit
+10.128.0.12 | CHANGED | rc=0 >>
+rabbit
+10.128.0.11 | CHANGED | rc=0 >>
+rabbit
+user@makhotaev:~/ansible$ (master)ansible all -m ping
+10.128.0.12 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+10.128.0.10 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+10.128.0.11 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker ps'
+10.128.0.12 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+10.128.0.10 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+10.128.0.11 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+user@makhotaev:~/ansible$ (master)ansible-playbook playbookrabbitmq.yml 
+[WARNING]: ansible.utils.display.initialize_locale has not been called, this may result in incorrectly calculated text widths that can cause Display to
+print incorrect line lengths
+
+PLAY [Play rabbitmq1] ***********************************************************************************************************************************
+
+TASK [Gathering Facts] **********************************************************************************************************************************
+ok: [10.128.0.10]
+
+TASK [Run docker rabbit1 container] *********************************************************************************************************************
+changed: [10.128.0.10]
+
+PLAY [Play rabbitmq2] ***********************************************************************************************************************************
+
+TASK [Gathering Facts] **********************************************************************************************************************************
+ok: [10.128.0.11]
+
+TASK [Run docker rabbit2 container] *********************************************************************************************************************
+changed: [10.128.0.11]
+
+TASK [Add rabbit2 to cluster] ***************************************************************************************************************************
+changed: [10.128.0.11]
+
+TASK [Print stdout] *************************************************************************************************************************************
+ok: [10.128.0.11] => {
+    "result.stdout": "Stopping node rabbit@rabbit2 ...\nClustering node rabbit@rabbit2 with rabbit@rabbit1 ...\nStarting node rabbit@rabbit2 ..."
+}
+
+PLAY [Play rabbitmq3] ***********************************************************************************************************************************
+
+TASK [Gathering Facts] **********************************************************************************************************************************
+ok: [10.128.0.12]
+
+TASK [Run docker rabbit3 container] *********************************************************************************************************************
+changed: [10.128.0.12]
+
+TASK [Add rabbit3 to cluster] ***************************************************************************************************************************
+changed: [10.128.0.12]
+
+TASK [Print stdout] *************************************************************************************************************************************
+ok: [10.128.0.12] => {
+    "result.stdout": "Stopping node rabbit@rabbit3 ...\nClustering node rabbit@rabbit3 with rabbit@rabbit1 ...\nStarting node rabbit@rabbit3 ..."
+}
+
+PLAY [Play Policies] ************************************************************************************************************************************
+
+TASK [Gathering Facts] **********************************************************************************************************************************
+ok: [10.128.0.10]
+
+TASK [Add Policy] ***************************************************************************************************************************************
+changed: [10.128.0.10]
+
+TASK [Print stdout] *************************************************************************************************************************************
+ok: [10.128.0.10] => {
+    "result.stdout": "Setting policy \"ha-all\" for pattern [] to \"{\\\"ha-mode\\\":\\\"all\\\",\\\"ha-sync-mode\\\":\\\"automatic\\\"}\" with priority \"0\" ..."
+}
+
+PLAY RECAP **********************************************************************************************************************************************
+10.128.0.10                : ok=5    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+10.128.0.11                : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+10.128.0.12                : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker ps'
+10.128.0.12 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
+91242a1b5b5a   rabbitmq:3.5-management   "/docker-entrypoint.…"   31 seconds ago   Up 30 seconds   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
+10.128.0.10 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
+306661fa2987   rabbitmq:3.5-management   "/docker-entrypoint.…"   53 seconds ago   Up 52 seconds   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
+10.128.0.11 | CHANGED | rc=0 >>
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
+55d0184caf8b   rabbitmq:3.5-management   "/docker-entrypoint.…"   51 seconds ago   Up 50 seconds   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker exec rabbit rabbitmqctl cluster_status'
+10.128.0.12 | CHANGED | rc=0 >>
+Cluster status of node rabbit@rabbit3 ...
+[{nodes,[{disc,[rabbit@rabbit1,rabbit@rabbit2,rabbit@rabbit3]}]},
+ {running_nodes,[rabbit@rabbit1,rabbit@rabbit2,rabbit@rabbit3]},
+ {cluster_name,<<"rabbit@rabbit1">>},
+ {partitions,[]}]
+10.128.0.11 | CHANGED | rc=0 >>
+Cluster status of node rabbit@rabbit2 ...
+[{nodes,[{disc,[rabbit@rabbit1,rabbit@rabbit2,rabbit@rabbit3]}]},
+ {running_nodes,[rabbit@rabbit3,rabbit@rabbit1,rabbit@rabbit2]},
+ {cluster_name,<<"rabbit@rabbit1">>},
+ {partitions,[]}]
+10.128.0.10 | CHANGED | rc=0 >>
+Cluster status of node rabbit@rabbit1 ...
+[{nodes,[{disc,[rabbit@rabbit1,rabbit@rabbit2,rabbit@rabbit3]}]},
+ {running_nodes,[rabbit@rabbit3,rabbit@rabbit2,rabbit@rabbit1]},
+ {cluster_name,<<"rabbit@rabbit1">>},
+ {partitions,[]}]
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'python3 /home/user/RabbitMQ/producer.py' -b
+10.128.0.10 | CHANGED | rc=0 >>
+
+10.128.0.11 | CHANGED | rc=0 >>
+
+10.128.0.12 | CHANGED | rc=0 >>
+
+user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'python3 /home/user/RabbitMQ/consumer.py &' -b
+10.128.0.10 | CHANGED | rc=0 >>
+
+10.128.0.12 | CHANGED | rc=0 >>
+
+10.128.0.11 | CHANGED | rc=0 >>
+```
+
+![Screenshot_20230226_140650](img/Screenshot_20230226_140650.png)
+
+![Screenshot_20230226_140704](img/Screenshot_20230226_140704.png)
+
+![Screenshot_20230226_140833](img/Screenshot_20230226_140833.png)
+
+![Screenshot_20230226_141119](img/Screenshot_20230226_141119.png)
