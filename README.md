@@ -629,43 +629,6 @@ rabbit
 
 ```bash
 user@makhotaev:~/ansible$ (master)ansible all -m ping
-10.128.0.10 | SUCCESS => {
-    "changed": false,
-    "ping": "pong"
-}
-10.128.0.12 | SUCCESS => {
-    "changed": false,
-    "ping": "pong"
-}
-10.128.0.11 | SUCCESS => {
-    "changed": false,
-    "ping": "pong"
-}
-user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker ps'
-10.128.0.10 | CHANGED | rc=0 >>
-CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
-70660516a621   rabbitmq:3.5-management   "/docker-entrypoint.…"   20 minutes ago   Up 20 minutes   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
-10.128.0.11 | CHANGED | rc=0 >>
-CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
-48030d625699   rabbitmq:3.5-management   "/docker-entrypoint.…"   20 minutes ago   Up 20 minutes   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
-10.128.0.12 | CHANGED | rc=0 >>
-CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                                                                                     NAMES
-f5fc26afcbfa   rabbitmq:3.5-management   "/docker-entrypoint.…"   20 minutes ago   Up 19 minutes   0.0.0.0:4369->4369/tcp, 0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:15672->15672/tcp, 0.0.0.0:25672->25672/tcp, 15671/tcp   rabbit
-user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker stop rabbit'
-10.128.0.10 | CHANGED | rc=0 >>
-rabbit
-10.128.0.11 | CHANGED | rc=0 >>
-rabbit
-10.128.0.12 | CHANGED | rc=0 >>
-rabbit
-user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'docker rm rabbit'
-10.128.0.10 | CHANGED | rc=0 >>
-rabbit
-10.128.0.12 | CHANGED | rc=0 >>
-rabbit
-10.128.0.11 | CHANGED | rc=0 >>
-rabbit
-user@makhotaev:~/ansible$ (master)ansible all -m ping
 10.128.0.12 | SUCCESS => {
     "changed": false,
     "ping": "pong"
