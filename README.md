@@ -768,3 +768,5 @@ user@makhotaev:~/ansible$ (master)ansible all -m shell -a 'python3 /home/user/Ra
 ![Screenshot_20230226_140833](img/Screenshot_20230226_140833.png)
 
 ![Screenshot_20230226_141119](img/Screenshot_20230226_141119.png)
+
+![Stat](img/Screenshot_20230226_151456.png)
