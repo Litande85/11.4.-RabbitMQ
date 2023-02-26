@@ -495,7 +495,12 @@ rabbit
 
 ### <a name="4">*Ответ к Заданию 4**</a>
 
+Создано 3 машины с помошью терраформ с предустановленными `docker`, `pip`, `pika`
+
 [ansible/hosts](ansible/hosts)
+
+
+Создан Playbook для `ansible`
 
 [ansible/playbookrabbitmq.yml](ansible/playbookrabbitmq.yml)
 
